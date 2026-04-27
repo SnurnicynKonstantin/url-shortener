@@ -25,6 +25,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "EXISTS missing",
         "SET session:abc token123 EX 5",
         "GET session:abc",
+        "SETURL https://example.com",
+        "SETURL https://rust-lang.org",
         "KEYS",
         "KEYS user*",
         "DEL test",

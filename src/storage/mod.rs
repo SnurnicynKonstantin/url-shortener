@@ -4,6 +4,8 @@ use std::time::{Duration, Instant};
 use crate::response::Response;
 use crate::error::StorageError;
 
+pub mod converter;
+
 pub struct Storage {
     data: Arc<RwLock<HashMap<String, StorageValue>>>,
     stats: Arc<RwLock<StorageStats>>,

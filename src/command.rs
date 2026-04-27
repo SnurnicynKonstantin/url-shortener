@@ -7,6 +7,7 @@ pub enum Command {
     Delete { key: String },
     Exists { key: String },
     SetEx { key: String, value: String, ttl_secs: u64 },
+    SetUrl { url: String },
     Info,
     Keys { pattern: Option<String> },
     Clear
@@ -73,6 +74,13 @@ impl Command {
                     None
                 };
                 Ok(Command::Keys { pattern })
+            }
+            
+            "SETURL" => {
+                if parts.len() != 2 {
+                    return Err(ParseError::InvalidArguments);
+                }
+                Ok(Command::SetUrl { url: parts[1].to_string() })
             }
             
             _ => Err(ParseError::UnknownCommand(command.to_string())),

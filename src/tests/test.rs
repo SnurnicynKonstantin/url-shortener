@@ -198,4 +198,64 @@ mod tests {
         let result = process_command(&storage, "   ");
         assert!(result.is_err(), "Expected error for whitespace-only command");
     }
+
+    #[test]
+    fn test_seturl_command() {
+        let storage = create_storage();
+
+        let seturl_result = process_command(&storage, "SETURL https://example.com").unwrap();
+        match seturl_result {
+            Response::BulkString(Some(short_key)) => {
+                assert!(!short_key.is_empty(), "Short key should not be empty");
+                
+                let get_result = process_command(&storage, &format!("GET {}", short_key)).unwrap();
+                match get_result {
+                    Response::BulkString(Some(url)) => assert_eq!(url, "https://example.com"),
+                    _ => panic!("Expected to retrieve original URL, got {:?}", get_result),
+                }
+            },
+            _ => panic!("Expected BulkString with short key, got {:?}", seturl_result),
+        }
+    }
+
+    #[test]
+    fn test_seturl_generates_consistent_keys() {
+        let storage = create_storage();
+
+        let result1 = process_command(&storage, "SETURL https://rust-lang.org").unwrap();
+        let result2 = process_command(&storage, "SETURL https://rust-lang.org").unwrap();
+
+        match (result1, result2) {
+            (Response::BulkString(Some(key1)), Response::BulkString(Some(key2))) => {
+                assert_eq!(key1, key2, "Same URL should generate the same short key");
+            },
+            _ => panic!("Expected BulkString responses from both SETURL commands"),
+        }
+    }
+
+    #[test]
+    fn test_seturl_different_keys_for_different_urls() {
+        let storage = create_storage();
+
+        let result1 = process_command(&storage, "SETURL https://example.com").unwrap();
+        let result2 = process_command(&storage, "SETURL https://google.com").unwrap();
+
+        match (result1, result2) {
+            (Response::BulkString(Some(key1)), Response::BulkString(Some(key2))) => {
+                assert_ne!(key1, key2, "Different URLs should generate different short keys");
+            },
+            _ => panic!("Expected BulkString responses from both SETURL commands"),
+        }
+    }
+
+    #[test]
+    fn test_seturl_invalid_arguments() {
+        let storage = create_storage();
+        
+        let result = process_command(&storage, "SETURL");
+        assert!(result.is_err(), "Expected error for SETURL without URL argument");
+        
+        let result = process_command(&storage, "SETURL url1 url2");
+        assert!(result.is_err(), "Expected error for SETURL with too many arguments");
+    }
 }

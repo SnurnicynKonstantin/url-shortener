@@ -1,4 +1,5 @@
 use crate::storage::Storage;
+use crate::storage::converter::generate_short_url;
 use crate::command::Command;
 use crate::response::Response;
 
@@ -11,6 +12,11 @@ pub fn process_command(storage: &Storage, input: &str) -> Result<Response, Box<d
         Command::Get { key } => storage.get(&key)?,
         Command::Delete { key } => storage.delete(&key)?,
         Command::Exists { key } => storage.exists(&key)?,
+        Command::SetUrl { url } => {
+            let short_key = generate_short_url(&url);
+            storage.set(short_key.clone(), url)?;
+            Response::BulkString(Some(short_key))
+        },
         Command::Keys { pattern } => {
             let pattern = pattern.as_deref();
             storage.keys(pattern)?

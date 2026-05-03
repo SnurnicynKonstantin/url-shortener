@@ -8,7 +8,7 @@ pub fn process_command(storage: &Storage, input: &str) -> Result<Response, Box<d
     
     let response = match command {
         Command::Set { key, value } => storage.set(key, value)?,
-        Command::SetEx { key, value, ttl_secs } => storage.set_ex(key, value, ttl_secs)?,
+        Command::SetWithTTL { key, value, ttl_secs } => storage.set_ex(key, value, ttl_secs)?,
         Command::Get { key } => storage.get(&key)?,
         Command::Delete { key } => storage.delete(&key)?,
         Command::Exists { key } => storage.exists(&key)?,
@@ -17,6 +17,7 @@ pub fn process_command(storage: &Storage, input: &str) -> Result<Response, Box<d
             storage.set(short_key.clone(), url)?;
             Response::BulkString(Some(short_key))
         },
+        Command::SetTTL { key, ttl_secs } => storage.set_ttl(&key, ttl_secs)?,
         Command::Keys { pattern } => {
             let pattern = pattern.as_deref();
             storage.keys(pattern)?

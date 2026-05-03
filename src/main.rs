@@ -1,69 +1,35 @@
 use crate::storage::Storage;
-use crate::handler::{process_command};
-use crate::response::Response;
+use crate::handler::process_command;
+use crate::controller::{shorten_url, redirect_to_url};
+use axum::{
+    routing::{get, post},
+    Router,
+};
+use std::sync::Arc;
+use tower_http::cors::CorsLayer;
 
 mod storage;
 mod command;
 mod response;
 mod error;
 mod handler;
+mod controller;
 
 #[cfg(test)]
 mod tests;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let storage = Storage::new();
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let storage = Arc::new(Storage::new());
 
-    let commands = vec![
-        "SET test hello",
-        "SET user:1 john",
-        "SET user:2 alice",
-        "GET test",
-        "GET user:1", 
-        "GET nonexistent",
-        "EXISTS test",
-        "EXISTS missing",
-        "SET session:abc token123 EX 5",
-        "GET session:abc",
-        "SETURL https://example.com",
-        "SETURL https://rust-lang.org",
-        "KEYS",
-        "KEYS user*",
-        "DEL test",
-        "EXISTS test",
-        "INFO",
-    ];
+    let app = Router::new()
+        .route("/getShortUrl", post(shorten_url))
+        .route("/:short_url", get(redirect_to_url))
+        .layer(CorsLayer::permissive())
+        .with_state(storage);
 
-    for (i, cmd) in commands.iter().enumerate() {
-        println!("\n{}. Команда: {}", i + 1, cmd);
-        
-        match process_command(&storage, cmd) {
-            Ok(response) => {
-                print!("   Результат: ");
-                print_response(response);
-            },
-            Err(e) => {
-                eprintln!("   Ошибка: {}", e);
-            }
-        }
-    }
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
+    axum::serve(listener, app).await?;
     
     Ok(())
-}
-
-pub fn print_response(response: Response) {
-    match response {
-        Response::SimpleString(s) => println!("{}", s),
-        Response::Error(e) => eprintln!("ERR {}", e),
-        Response::Integer(i) => println!("{}", i),
-        Response::BulkString(Some(s)) => println!("\"{}\"", s),
-        Response::BulkString(None) => println!("(nil)"),
-        Response::Array(arr) => {
-            for (i, item) in arr.iter().enumerate() {
-                print!("{}) ", i + 1);
-                print_response(item.clone());
-            }
-        },
-        Response::Null => println!("(empty)"),
-    }
 }

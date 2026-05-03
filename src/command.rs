@@ -6,8 +6,9 @@ pub enum Command {
     Get { key: String },
     Delete { key: String },
     Exists { key: String },
-    SetEx { key: String, value: String, ttl_secs: u64 },
+    SetWithTTL { key: String, value: String, ttl_secs: u64 },
     SetUrl { url: String },
+    SetTTL { key: String, ttl_secs: u64 },
     Info,
     Keys { pattern: Option<String> },
     Clear
@@ -38,7 +39,7 @@ impl Command {
                 }
                 
                 if let Some(ttl) = ttl {
-                    Ok(Command::SetEx { key, value, ttl_secs: ttl })
+                    Ok(Command::SetWithTTL { key, value, ttl_secs: ttl })
                 } else {
                     Ok(Command::Set { key, value })
                 }
@@ -81,6 +82,15 @@ impl Command {
                     return Err(ParseError::InvalidArguments);
                 }
                 Ok(Command::SetUrl { url: parts[1].to_string() })
+            }
+            
+            "SETTTL" => {
+                if parts.len() != 3 {
+                    return Err(ParseError::InvalidArguments);
+                }
+                let key = parts[1].to_string();
+                let ttl_secs = parts[2].parse::<u64>()?;
+                Ok(Command::SetTTL { key, ttl_secs })
             }
             
             _ => Err(ParseError::UnknownCommand(command.to_string())),

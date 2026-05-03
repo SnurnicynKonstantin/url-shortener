@@ -149,6 +149,33 @@ impl Storage {
         Ok(Response::Integer(if exists { 1 } else { 0 }))
     }
     
+    pub fn set_ttl(&self, key: &str, ttl_secs: u64) -> Result<Response, StorageError> {
+        let mut data = self.data.write().map_err(|_| StorageError::LockPoisoned)?;
+        
+        if let Some(value) = data.get_mut(key) {
+            let is_currently_expired = value.expires_at
+                .map(|exp| exp <= Instant::now())
+                .unwrap_or(false);
+            
+            if is_currently_expired {
+                return Ok(Response::Integer(0));
+            }
+            
+            if ttl_secs == 0 {
+                data.remove(key);
+                if let Ok(mut stats) = self.stats.write() {
+                    stats.total_keys = data.len();
+                }
+                Ok(Response::Integer(1))
+            } else {
+                value.expires_at = Some(Instant::now() + Duration::from_secs(ttl_secs));
+                Ok(Response::Integer(1))
+            }
+        } else {
+            Ok(Response::Integer(0))
+        }
+    }
+    
     pub fn keys(&self, pattern: Option<&str>) -> Result<Response, StorageError> {
         let data = self.data.read().map_err(|_| StorageError::LockPoisoned)?;
         

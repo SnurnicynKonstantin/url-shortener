@@ -203,7 +203,7 @@ impl Storage {
     }
     
     pub fn clear(&self) -> Result<Response, StorageError> {
-        let mut data = self.data.write().map_err(|_| StorageError::LockPoisoned)?;
+        let mut data = self.data.write().expect("Storage data lock poisoned");
         data.clear();
         
         if let Ok(mut stats) = self.stats.write() {

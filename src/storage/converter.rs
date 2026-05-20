@@ -1,25 +1,15 @@
-use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use fnv::FnvHasher;
+use base64ct::{Base64UrlUnpadded, Encoding};
 
 pub fn generate_short_url(url: &str) -> String {
-    let mut hasher = DefaultHasher::new();
+    let mut hasher = FnvHasher::default();
     url.hash(&mut hasher);
     let hash = hasher.finish();
 
-    let truncated_hash = (hash & 0xFFFFFFFF) as u32;
+    let hash_bytes = hash.to_be_bytes();
     
-    let base62_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    let mut result = String::new();
-    let mut n = truncated_hash;
-
-    while n > 0 && result.len() < 6 {
-        result.push(base62_chars.chars().nth((n % 62) as usize).unwrap());
-        n /= 62;
-    }
+    let encoded = Base64UrlUnpadded::encode_string(&hash_bytes);
     
-    if result.is_empty() {
-        result.push('0');
-    }
-    
-    result.chars().rev().collect()
+    encoded.chars().take(6).collect()
 }

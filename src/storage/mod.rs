@@ -72,7 +72,7 @@ impl Storage {
     }
     
     pub fn set(&self, key: String, value: String) -> Result<Response, StorageError> {
-        let mut data = self.data.write().map_err(|_| StorageError::LockPoisoned)?;
+        let mut data = self.data.write().expect("Storage data lock poisoned");
         
         data.insert(key, StorageValue {
             value,

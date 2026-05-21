@@ -1,15 +1,10 @@
-use std::hash::{Hash, Hasher};
-use fnv::FnvHasher;
 use base64ct::{Base64UrlUnpadded, Encoding};
 
 pub fn generate_short_url(url: &str) -> String {
-    let mut hasher = FnvHasher::default();
-    url.hash(&mut hasher);
-    let hash = hasher.finish();
-
-    let hash_bytes = hash.to_be_bytes();
+    let hash = blake3::hash(url.as_bytes());
+    let hash_bytes = hash.as_bytes();
     
-    let encoded = Base64UrlUnpadded::encode_string(&hash_bytes);
+    let encoded = Base64UrlUnpadded::encode_string(&hash_bytes[..6]);
     
-    encoded.chars().take(6).collect()
+    encoded
 }
